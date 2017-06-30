@@ -1,0 +1,163 @@
+#!groovy
+
+// 06-29-17 novacain1: used for advanced openshift 3.5 appdev course
+// Run this node on a Maven Slave
+// Maven Slaves have JDK and Maven already installed
+node('maven') {
+  // Define Maven Command. Make sure it points to the correct settings for our
+  // Nexus installation. The file nexus_openshift_settings.xml needs to be in the
+  // Source Code repository.
+  def mvnCmd = "mvn -s ./nexus_openshift_settings.xml"
+
+  stage('Checkout Source') {
+    // Get Source Code from SCM (Git) as configured in the Jenkins Project
+    // Next line for inline script, "checkout scm" for Jenkinsfile from Gogs
+    // git 'http://dcain-gogs-dcain-gogs.apps.rdu.openshift.opentlc.com/CICDLabs/openshift-tasks.git'
+    checkout scm
+  }
+
+  // The following variables need to be defined at the top level and not inside
+  // the scope of a stage - otherwise they would not be accessible from other stages.
+  // Extract version and other properties from the pom.xml
+  def groupId    = getGroupIdFromPom("pom.xml")
+  def artifactId = getArtifactIdFromPom("pom.xml")
+  def version    = getVersionFromPom("pom.xml")
+
+  // Using Maven build the war file
+  // Do not run tests in this step
+  stage('Build war') {
+    echo "Building WAR with version ${version}."
+    sh "${mvnCmd} clean package -DskipTests=true"
+  }
+
+  // Using Maven run the unit tests
+  stage('Unit Tests') {
+    echo "Starting unit tests section."
+    sh "${mvnCmd} test"
+  }
+
+  // Using Maven call SonarQube for Code Analysis
+  stage('Code Analysis') {
+    echo "Starting code analysis section."
+    sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-dcain-sonar.apps.rdu.openshift.opentlc.com/ -Dsonar.projectName=${JOB_BASE_NAME}"
+  }
+
+  // Publish the latest war file to Nexus. This needs to go into <nexusurl>/repository/releases.
+  // Using the properties from the pom.xml file construct a filename that includes the version number from the pom.xml file
+  //
+  // You now have two options: Either binary build (streaming the war file into a binary build) or build with external artifacts.
+  // If you are unclear which path to follow ask your instructor.
+  // 
+  // When doing a binary build you are done.
+  // 
+  // - It is also a good idea to add another line like "BUILD_NUMBER=${BUILD_NUMBER}" to the environment file. Otherwise the
+  //   push to Gig/Gogs will fail in case the version number didn't change. ${BUILD_NUMBER} is one of the Jenkins built-in
+  //   variables.
+  stage('Publish to Nexus') {
+    echo "Starting publish to nexus section."
+    sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3-dcain-nexus.apps.rdu.openshift.opentlc.com/repository/releases"
+  }
+
+  // Build the OpenShift Image in OpenShift. 
+  // 1. When doing a binary build make sure to rename the file ./target/openshift-tasks.war to ROOT.war before you start the build.
+  //    for the .s2i/bin/assemble script to retrieve the war file from the location in the .s2i/environment file.
+  // Also tag the image with "TestingCandidate-${version}" - e.g. TestingCandidate-1.5
+  stage('Build OpenShift Image') {
+    echo "Starting build OpenShift image section."
+    def newTag = "TestingCandidate-${version}"
+    echo "New Tag: ${newTag}"
+    
+    sh "cp ./target/openshift-tasks.war ./ROOT.war"
+    sh "oc project dcain-tasks-dev"
+    sh "oc start-build tasks --from-file=./ROOT.war --namespace=dcain-tasks-dev"
+    
+    openshiftVerifyBuild bldCfg: 'tasks', checkForTriggeredDeployments: 'false',
+                     namespace: 'dcain-tasks-dev', verbose: 'false', waitTime: ''
+
+    openshiftTag alias: 'false', destStream: 'tasks', destTag: newTag,
+             destinationNamespace: 'dcain-tasks-dev', namespace: 'dcain-tasks-dev',
+             srcStream: 'tasks', srcTag: 'latest', verbose: 'false'
+  }
+
+  // Deploy the built image to the Development Environment. Pay close attention to WHICH image you are deploying.
+  // Make sure it is the one you just tagged in the previous step. You may need to patch the deployment configuration
+  // of your application.
+  stage('Deploy to Dev') {
+    echo "Starting deploy to dev section."
+    sh "oc project dcain-tasks-dev"
+    sh "oc patch deploymentconfig tasks --patch '{\"spec\": { \"triggers\": [ { \"type\": \"ImageChange\", \"imageChangeParams\": { \"containerNames\": [ \"tasks\" ], \"from\": { \"kind\": \"ImageStreamTag\", \"namespace\": \"dcain-tasks-dev\", \"name\": \"tasks:TestingCandidate-$version\"}}}]}}' --namespace=dcain-tasks-dev"
+
+    openshiftDeploy depCfg: 'tasks', namespace: 'dcain-tasks-dev', verbose: 'false', waitTime: '', waitUnit: 'sec'
+    openshiftVerifyDeployment depCfg: 'tasks', namespace: 'dcain-tasks-dev', replicaCount: '1', verbose: 'false', verifyReplicaCount: 'false', waitTime: '', waitUnit: 'sec'
+    openshiftVerifyService namespace: 'dcain-tasks-dev', svcName: 'tasks', verbose: 'false'
+  }
+
+  // Run some integration tests (see the openshift-tasks Github Repository README.md for ideas).
+  // Once the tests succeed tag the image as ProdReady-${version}
+  stage('Integration Test') {
+    echo "Starting integration test section."
+    def newTag = "ProdReady-${version}"
+    echo "New Tag: ${newTag}"
+    
+    openshiftTag alias: 'false', destStream: 'tasks', destTag: newTag, 
+             destinationNamespace: 'dcain-tasks-dev', namespace: 'dcain-tasks-dev', 
+             srcStream: 'tasks', srcTag: 'latest', verbose: 'false'
+  }
+
+  // Blue/Green Deployment into Production
+  // -------------------------------------
+  // Next two stages could be one.
+  // Make sure to deploy the right version. If green is active then deploy blue, and vice versa.
+  // You will need to figure out which application is active and set the target to the other.
+    
+  def destination   = "tasks-green"
+  def active = ""
+    
+  stage('Prepare Production Deployment') {
+    echo "Starting prepare production deployment section."
+    sh "oc project dcain-tasks-prod"
+    sh "oc get route tasks -n dcain-tasks-prod -o jsonpath='{ .spec.to.name }' > activesvc.txt"
+    active = readFile('activesvc.txt').trim()
+    if (active == "tasks-green") {
+      destination = "tasks-blue"
+    }
+    echo "Active svc: " + active
+    echo "Destination svc:   " + destination
+    
+  }
+  // Deploy the ProdReady-${version} image. Make sure this is the actual tagged image deployed!
+  // Do not activate the new version yet.
+  stage('Deploy new Version') {
+    echo "Starting deploy new version section."
+    sh "oc patch deploymentconfig ${destination} --patch '{\"spec\": { \"triggers\": [ { \"type\": \"ImageChange\", \"imageChangeParams\": { \"containerNames\": [ \"$destination\" ], \"from\": { \"kind\": \"ImageStreamTag\", \"namespace\": \"dcain-tasks-dev\", \"name\": \"tasks:ProdReady-$version\"}}}]}}' --namespace=dcain-tasks-prod"
+
+    openshiftDeploy depCfg: destination, namespace: 'dcain-tasks-prod', verbose: 'false', waitTime: '', waitUnit: 'sec'
+    openshiftVerifyDeployment depCfg: destination, namespace: 'dcain-tasks-prod', replicaCount: '1', verbose: 'false', verifyReplicaCount: 'true', waitTime: '', waitUnit: 'sec'
+    openshiftVerifyService namespace: 'dcain-tasks-prod', svcName: destination, verbose: 'false'
+  }
+
+  // Once approved (input step) switch production over to the new version.
+  stage('Switch over to new Version') {
+    input "Switch Production?"
+    echo "Starting switch to production question section."
+    sh 'oc patch route tasks -n dcain-tasks-prod -p \'{"spec":{"to":{"name":"' + destination + '"}}}\''
+    sh 'oc get route tasks -n dcain-tasks-prod > oc_out.txt'
+    oc_out = readFile('oc_out.txt')
+    echo "Current route configuration: " + oc_out
+  }
+}
+
+// Convenience Functions to read variables from the pom.xml
+// Do not change anything below this line.
+def getVersionFromPom(pom) {
+  def matcher = readFile(pom) =~ '<version>(.+)</version>'
+  matcher ? matcher[0][1] : null
+}
+def getGroupIdFromPom(pom) {
+  def matcher = readFile(pom) =~ '<groupId>(.+)</groupId>'
+  matcher ? matcher[0][1] : null
+}
+def getArtifactIdFromPom(pom) {
+  def matcher = readFile(pom) =~ '<artifactId>(.+)</artifactId>'
+  matcher ? matcher[0][1] : null
+}

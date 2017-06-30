@@ -1,0 +1,6 @@
+strategy:
+  type: "Source"
+  sourceStrategy:
+    from:
+      kind: "ImageStreamTag"
+      name: "redhat-openjdk18-openshift:latest"

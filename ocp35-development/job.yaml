@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: echo
+spec:
+  parallelism: 1    
+  completions: 1    
+  template:
+    metadata:
+      name: echo
+    spec:
+      containers:
+      - name: echo
+        image: busybox
+        command: ["/bin/sh"]
+        args:
+          - "-c"
+          - echo "Lovely message output to standard out."
+      restartPolicy: Never
