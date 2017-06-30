@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: printenv-pod
+spec:
+  containers:
+    - name: printenv-container
+      image: https://github.com/wkulhanek/PrintEnv
+      command: [ "/bin/sh", "-c", "env" ]
+      env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+  restartPolicy: Never
