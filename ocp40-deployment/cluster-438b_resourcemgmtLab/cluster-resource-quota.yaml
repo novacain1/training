@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ClusterResourceQuota
+metadata:
+  name: clusterquota-andrew
+spec:
+  quota:
+    hard:
+      pods: "25"
+      requests.cpu: "5"
+      requests.memory: "6Gi"
+      limits.cpu: "25"
+      limits.memory: "40Gi"
+      configmaps: "25"
+      persistentvolumeclaims: "25" 
+      services: "25" 

@@ -1,0 +1,14 @@
+
+---
+apiVersion: "autoscaling.openshift.io/v1alpha1"
+kind: MachineAutoscaler
+metadata:
+  name: autoscale-ssd-1b
+  namespace: "openshift-cluster-api"
+spec:
+  minReplicas: 1
+  maxReplicas: 5
+  scaleTargetRef:
+    apiVersion: cluster.k8s.io/v1alpha1
+    kind: MachineSet
+    name: ssd-1b

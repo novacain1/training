@@ -1,0 +1,114 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: 2019-02-20T20:10:34Z
+  generation: 4
+  labels:
+    app: webserver
+  name: webserver
+  namespace: scheduling
+  resourceVersion: "405430"
+  selfLink: /apis/apps.openshift.io/v1/namespaces/scheduling/deploymentconfigs/webserver
+  uid: 94e22a40-354b-11e9-ba48-0a580a82003a
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    app: webserver
+    deploymentconfig: webserver
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        app: webserver
+        deploymentconfig: webserver
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - cache
+            topologyKey: kubernetes.io/hostname
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - webserver
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - image: openshift/hello-openshift@sha256:aaea76ff622d2f8bcb32e538e7b3cd0ef6d291953f3e7c9f556c1ba5baf47e2e
+        imagePullPolicy: IfNotPresent
+        name: webserver
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8888
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - webserver
+      from:
+        kind: ImageStreamTag
+        name: webserver:v3.10
+        namespace: scheduling
+      lastTriggeredImage: openshift/hello-openshift@sha256:aaea76ff622d2f8bcb32e538e7b3cd0ef6d291953f3e7c9f556c1ba5baf47e2e
+    type: ImageChange
+status:
+  availableReplicas: 2
+  conditions:
+  - lastTransitionTime: 2019-02-20T20:19:51Z
+    lastUpdateTime: 2019-02-20T20:19:54Z
+    message: replication controller "webserver-2" successfully rolled out
+    reason: NewReplicationControllerAvailable
+    status: "True"
+    type: Progressing
+  - lastTransitionTime: 2019-02-20T20:20:02Z
+    lastUpdateTime: 2019-02-20T20:20:02Z
+    message: Deployment config has minimum availability.
+    status: "True"
+    type: Available
+  details:
+    causes:
+    - type: ConfigChange
+    message: config change
+  latestVersion: 2
+  observedGeneration: 4
+  readyReplicas: 2
+  replicas: 2
+  unavailableReplicas: 0
+  updatedReplicas: 2

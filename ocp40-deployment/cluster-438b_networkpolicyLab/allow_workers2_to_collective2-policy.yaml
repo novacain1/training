@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-workers2-project-to-database
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: workers2
+    ports:
+    - port: 3306
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      name: database

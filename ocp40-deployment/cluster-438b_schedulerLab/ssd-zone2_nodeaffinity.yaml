@@ -1,0 +1,106 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: 2019-02-20T19:38:19Z
+  generation: 5
+  labels:
+    app: ssd-zone2
+  name: ssd-zone2
+  namespace: scheduling
+  resourceVersion: "393406"
+  selfLink: /apis/apps.openshift.io/v1/namespaces/scheduling/deploymentconfigs/ssd-zone2
+  uid: 132b01be-3547-11e9-ba48-0a580a82003a
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    app: ssd-zone2
+    deploymentconfig: ssd-zone2
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        app: ssd-zone2
+        deploymentconfig: ssd-zone2
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: ssd
+                operator: In
+                values:
+                - "true"
+              - key: failure-domain.beta.kubernetes.io/zone
+                operator: In
+                values:
+                - us-east-1b
+      containers:
+      - image: openshift/hello-openshift@sha256:aaea76ff622d2f8bcb32e538e7b3cd0ef6d291953f3e7c9f556c1ba5baf47e2e
+        imagePullPolicy: IfNotPresent
+        name: ssd-zone2
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8888
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - ssd-zone2
+      from:
+        kind: ImageStreamTag
+        name: ssd-zone2:v3.10
+        namespace: scheduling
+      lastTriggeredImage: openshift/hello-openshift@sha256:aaea76ff622d2f8bcb32e538e7b3cd0ef6d291953f3e7c9f556c1ba5baf47e2e
+    type: ImageChange
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: 2019-02-20T19:38:36Z
+    lastUpdateTime: 2019-02-20T19:38:36Z
+    message: Deployment config has minimum availability.
+    status: "True"
+    type: Available
+  - lastTransitionTime: 2019-02-20T20:02:13Z
+    lastUpdateTime: 2019-02-20T20:02:15Z
+    message: replication controller "ssd-zone2-4" successfully rolled out
+    reason: NewReplicationControllerAvailable
+    status: "True"
+    type: Progressing
+  details:
+    causes:
+    - type: ConfigChange
+    message: config change
+  latestVersion: 4
+  observedGeneration: 5
+  readyReplicas: 1
+  replicas: 1
+  unavailableReplicas: 0
+  updatedReplicas: 1

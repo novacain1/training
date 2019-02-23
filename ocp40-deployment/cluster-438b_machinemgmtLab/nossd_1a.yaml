@@ -1,0 +1,66 @@
+apiVersion: cluster.k8s.io/v1alpha1
+kind: MachineSet
+metadata:
+  labels:
+    sigs.k8s.io/cluster-api-cluster: cluster-438b
+    sigs.k8s.io/cluster-api-machine-role: worker
+    sigs.k8s.io/cluster-api-machine-type: worker
+  name: nossd-1a
+  namespace: openshift-cluster-api
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      sigs.k8s.io/cluster-api-cluster: cluster-438b
+      sigs.k8s.io/cluster-api-machineset: nossd-1a
+  template:
+    metadata:
+      labels:
+        sigs.k8s.io/cluster-api-cluster: cluster-438b
+        sigs.k8s.io/cluster-api-machine-role: worker
+        sigs.k8s.io/cluster-api-machine-type: worker
+        sigs.k8s.io/cluster-api-machineset: nossd-1a
+    spec:
+      metadata:
+        labels:
+          ssd: "false"
+      providerSpec:
+        value:
+          ami:
+            id: ami-0cceee6c849871e07
+          apiVersion: awsproviderconfig.k8s.io/v1alpha1
+          blockDevices:
+          - ebs:
+              iops: 0
+              volumeSize: 120
+              volumeType: gp2
+          deviceIndex: 0
+          iamInstanceProfile:
+            id: cluster-438b-worker-profile
+          instanceType: m4.large
+          kind: AWSMachineProviderConfig
+          metadata:
+            creationTimestamp: null
+          placement:
+            availabilityZone: us-east-1a
+            region: us-east-1
+          publicIp: null
+          securityGroups:
+          - filters:
+            - name: tag:Name
+              values:
+              - cluster-438b_worker_sg
+          subnet:
+            filters:
+            - name: tag:Name
+              values:
+              - cluster-438b-worker-us-east-1a
+          tags:
+          - name: openshiftClusterID
+            value: 248baa51-413d-4ceb-a885-68091078f286
+          - name: kubernetes.io/cluster/cluster-438b
+            value: owned
+          userDataSecret:
+            name: worker-user-data
+      versions:
+        kubelet: ""
