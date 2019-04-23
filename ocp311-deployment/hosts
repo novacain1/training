@@ -1,6 +1,6 @@
 #
-# ansible inventory for OpenShift Container Platform  3.11.59
-# AgnosticD ansible-config: ocp-ha-disconnected-lab
+# ansible inventory for OpenShift Container Platform  3.11.98
+# AgnosticD ansible-config: ocp-ha-lab
 
 [OSEv3:vars]
 
@@ -24,9 +24,9 @@ openshift_disable_check="disk_availability,memory_availability,docker_image_avai
 # If openshift_image_tag is set, its value is used for all hosts in system container environments, even those that have another version installed. If
 # Use this variable to specify a container image tag to install or configure.
 #openshift_pkg_version is set, its value is used for all hosts in RPM-based environments, even those that have another version installed.
-openshift_image_tag=v3.11.59
+openshift_image_tag=v3.11.98
 # Use this variable to specify an RPM version to install or configure.
-openshift_pkg_version=-3.11.59
+openshift_pkg_version=-3.11.98
 openshift_release="3.11"
 
 
@@ -47,17 +47,19 @@ openshift_enable_olm=true
 ###########################################################################
 
 #oreg_url=registry.access.redhat.com/openshift3/ose-${component}:${version}
-oreg_url=isolated1.7ad6.internal:5000/openshift3/ose-${component}:${version}
+oreg_url=registry.redhat.io/openshift3/ose-${component}:${version}
+oreg_auth_user=USERNAME
+oreg_auth_password=PASSWORD
 
 # Comment out for unauthenticated access
 #oreg_auth_user=anonymous
 #oreg_auth_password=nopassword
 
 # For Operator Framework Images
-#openshift_additional_registry_credentials={'host':'registry.connect.redhat.com','user':'USERNAME','password':'PASSW0RD','test_image':'mongodb/enterprise-operator:0.3.2'}
+#openshift_additional_registry_credentials={'host':'registry.connect.redhat.com','user':'USERNAME','password':'PASSWORD','test_image':'mongodb/enterprise-operator:0.3.2'}
 
 openshift_examples_modify_imagestreams=true
-openshift_docker_insecure_registries=isolated1.7ad6.internal:5000
+#openshift_docker_insecure_registries=isolated1.cb26.internal:5000
 
 # Set this line to enable NFS
 openshift_enable_unsupported_configurations=True
@@ -70,9 +72,9 @@ openshift_master_api_port=443
 openshift_master_console_port=443
 
 #Default:  openshift_master_cluster_method=native
-openshift_master_cluster_hostname=loadbalancer.7ad6.internal
-openshift_master_cluster_public_hostname=loadbalancer.7ad6.example.opentlc.com
-openshift_master_default_subdomain=apps.7ad6.example.opentlc.com
+openshift_master_cluster_hostname=loadbalancer.cb26.internal
+openshift_master_cluster_public_hostname=loadbalancer.cb26.example.opentlc.com
+openshift_master_default_subdomain=apps.cb26.example.opentlc.com
 #openshift_master_ca_certificate=
 openshift_master_overwrite_named_certificates=false
 
@@ -252,32 +254,33 @@ nodes
 nfs
 
 [lb]
-loadbalancer.7ad6.internal
+loadbalancer.cb26.internal
 
 [masters]
-master1.7ad6.internal
-master2.7ad6.internal
-master3.7ad6.internal
+master1.cb26.internal
+master2.cb26.internal
+master3.cb26.internal
 
 [etcd]
-master1.7ad6.internal
-master2.7ad6.internal
-master3.7ad6.internal
+master1.cb26.internal
+master2.cb26.internal
+master3.cb26.internal
 
 [nodes]
 ## These are the masters
-master1.7ad6.internal openshift_node_group_name='node-config-master' openshift_node_problem_detector_install=true
-master2.7ad6.internal openshift_node_group_name='node-config-master' openshift_node_problem_detector_install=true
-master3.7ad6.internal openshift_node_group_name='node-config-master' openshift_node_problem_detector_install=true
+master1.cb26.internal openshift_node_group_name='node-config-master' openshift_node_problem_detector_install=true
+master2.cb26.internal openshift_node_group_name='node-config-master' openshift_node_problem_detector_install=true
+master3.cb26.internal openshift_node_group_name='node-config-master' openshift_node_problem_detector_install=true
 
 ## These are infranodes
-infranode1.7ad6.internal openshift_node_group_name='node-config-infra' openshift_node_problem_detector_install=true
-infranode2.7ad6.internal openshift_node_group_name='node-config-infra' openshift_node_problem_detector_install=true
+infranode1.cb26.internal openshift_node_group_name='node-config-infra' openshift_node_problem_detector_install=true
+infranode2.cb26.internal openshift_node_group_name='node-config-infra' openshift_node_problem_detector_install=true
 
 ## These are regular nodes
-node1.7ad6.internal openshift_node_group_name='node-config-compute' openshift_node_problem_detector_install=true
-node2.7ad6.internal openshift_node_group_name='node-config-compute' openshift_node_problem_detector_install=true
+node1.cb26.internal openshift_node_group_name='node-config-compute' openshift_node_problem_detector_install=true
+node2.cb26.internal openshift_node_group_name='node-config-compute' openshift_node_problem_detector_install=true
+node3.cb26.internal openshift_node_group_name='node-config-compute' openshift_node_problem_detector_install=true
 
 ## Not recommended NFS storage node in AWS
 [nfs]
-support1.7ad6.internal
+support1.cb26.internal
